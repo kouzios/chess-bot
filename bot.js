@@ -1,6 +1,7 @@
 const { Client, MessageEmbed } = require("discord.js");
 var logger = require("winston");
 const fetch = require("node-fetch");
+const pgnParser = require('pgn-parser');
 
 var auth = require("./auth.json");
 
@@ -76,26 +77,53 @@ const chess = async (msg, url) => {
 	const res = await fetch(url);
 	const buffer = await res.buffer();
 	const fileContents = buffer.toString();
-	const output = parseMatchData(fileContents);
+	const [output, headers] = parseMatchData(fileContents);
 	
-	const embed = new MessageEmbed()
-		.setTitle("Chess Board [TODO]")
-		.setColor(0xff0000)
+  const embed = new MessageEmbed()
+    .setAuthor(headers.white + " vs " + headers.black)
+		.setTitle(headers.result + " " + headers.termination)
+		.setColor(0xff0000)//todo change based on if white or black won?
 		.setDescription(output);
 
 	msg.channel.send(embed);
 };
 
 const parseMatchData = (fileContents) => {
-	//Split the data into two sections, the match info and the match plays
-	let data = fileContents.split("\n");
-	const info = data.splice(0, 13);
-	data.shift();//Remove empty new space entry
-	let match = data.join('');
+  //Split the data into two sections, the match info and the match plays
+	// let data = fileContents.replace(/{\[%timestamp\s?[0-9]+\]}/g, '').split("\n");
+	// const info = data.splice(0, 13);
+	// data.shift();//Remove empty new space entry
+	// let match = data.join('');
 
-	console.log(info);
-	console.log(match);
-	return match;
+	// console.log(info);
+  // console.log(match);
+  const parsedContents = (pgnParser.parse(fileContents))[0];
+  let headers = parsedContents.headers;
+  headers = {
+    date: headers[2].value,
+    white: headers[4].value,
+    black: headers[5].value,
+    result: headers[6].value,
+    termination: headers[12].value,
+  }
+
+  let moves = createBoard(parsedContents.moves);
+
+  console.log(headers)
+  console.log(moves)
+
+	return [moves, headers];
+}
+
+const createBoard = (moves) => {
+  moves = moves.map((move) => (
+    {move_number: move.move_number, move: move.move}
+  ));
+  //TODO: replace with actual board
+  moves = moves.map((move) => (
+    "Move " + move.move_number + ": " + move.move
+  ))
+  return moves;
 }
 
 bot.login(auth.token);

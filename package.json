@@ -25,6 +25,7 @@
     "discord.js": "^12.5.1",
     "file-type": "^16.0.1",
     "node-fetch": "^2.6.1",
+    "pgn-parser": "^2.0.0",
     "winston": "^3.3.3"
   }
 }
