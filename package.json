@@ -1,0 +1,30 @@
+{
+  "name": "chess-bot",
+  "version": "1.0.0",
+  "description": "A Discord chess bot that can import your games and let you play them in an application! (Ideally)",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon bot.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kouzios/chess-bot.git"
+  },
+  "keywords": [],
+  "author": "Matthew Kouzios <mkouzios@hotmail.com> (https://github.com/kouzios)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kouzios/chess-bot/issues"
+  },
+  "homepage": "https://github.com/kouzios/chess-bot#readme",
+  "devDependencies": {
+    "nodemon": "^2.0.6"
+  },
+  "dependencies": {
+    "discord.js": "^12.5.1",
+    "file-type": "^16.0.1",
+    "node-fetch": "^2.6.1",
+    "winston": "^3.3.3"
+  }
+}
