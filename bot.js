@@ -1,9 +1,8 @@
-const { Client, MessageEmbed } = require("discord.js");
+const { Client, MessageEmbed, MessageAttachment } = require("discord.js");
 var logger = require("winston");
 const fetch = require("node-fetch");
-const pgnParser = require('pgn-parser');
-
 var auth = require("./auth.json");
+var gifFrames = require('gif-frames');
 
 // Configure logger settings
 logger.remove(logger.transports.Console);
@@ -38,33 +37,33 @@ bot.on("message", async (msg) => {
     command = args;
   }
 
-  /* Change this block to individual if later commands need different parameter styles */
-  if (params.length != 0) {
-    msg.reply(
-      "Please specify only the !chess command and your linked game file when summoning the bot, with no extra parameters"
-    );
-    return;
-  }
-
-  if (msg.attachments.size != 1) {
-    msg.reply("Please ensure you have linked (only) your Chess pgn game file");
-    return;
-  }
-
-  const url = msg.attachments.values().next().value.url;
-  const extension = url.match(/\.\w{3,4}($|\?)/g)[0];
-  if (extension !== ".pgn") {
-    msg.reply(
-      "Please ensure the file you linked is a Chess [.pgn] file, not a [" +
-        extension +
-        "] file"
-    );
-    return;
-	}
-  /* End param block */
-
   switch (command) {
     case "chess":
+      if (params.length != 0) {
+        msg.reply(
+          "Please specify only the !chess command and your linked game gif when summoning the bot, with no extra parameters"
+        );
+        return;
+      }
+    
+      if (msg.attachments.size != 1) {
+        msg.reply("Please ensure you have linked (only) your Chess gif file");
+        return;
+      }
+    
+      const url = msg.attachments.values().next().value.url;
+      msg.attachments = null;
+      const extension = url.match(/\.\w{3,4}($|\?)/g)[0];
+      if (extension !== ".gif") {
+        msg.reply(
+          "Please ensure the file you linked is a Chess [.gif] file, not a [" +
+            extension +
+            "] file"
+        );
+        return;
+      }
+      msg.delete({timeout: 500});
+      msg.reply("Chess command received, gif deleted to save channel space, creating game");
       chess(msg, url);
       break;
     default:
@@ -73,57 +72,11 @@ bot.on("message", async (msg) => {
 });
 
 const chess = async (msg, url) => {
-	//Get match data from provided Discord file, and then parse through it
-	const res = await fetch(url);
-	const buffer = await res.buffer();
-	const fileContents = buffer.toString();
-	const [output, headers] = parseMatchData(fileContents);
-	
-  const embed = new MessageEmbed()
-    .setAuthor(headers.white + " vs " + headers.black)
-		.setTitle(headers.result + " " + headers.termination)
-		.setColor(0xff0000)//todo change based on if white or black won?
-		.setDescription(output);
-
-	msg.channel.send(embed);
+  //Break the provided gif into frames, then add them to a list to be iterated through as the user pleases
+  const frameData = await gifFrames({ url, frames: 'all', outputType: 'jpg', cumulative: true });
+  const image1 = (frameData[0].getImage())._obj;
+  msg.channel.send(new MessageAttachment(image1))
 };
 
-const parseMatchData = (fileContents) => {
-  //Split the data into two sections, the match info and the match plays
-	// let data = fileContents.replace(/{\[%timestamp\s?[0-9]+\]}/g, '').split("\n");
-	// const info = data.splice(0, 13);
-	// data.shift();//Remove empty new space entry
-	// let match = data.join('');
-
-	// console.log(info);
-  // console.log(match);
-  const parsedContents = (pgnParser.parse(fileContents))[0];
-  let headers = parsedContents.headers;
-  headers = {
-    date: headers[2].value,
-    white: headers[4].value,
-    black: headers[5].value,
-    result: headers[6].value,
-    termination: headers[12].value,
-  }
-
-  let moves = createBoard(parsedContents.moves);
-
-  console.log(headers)
-  console.log(moves)
-
-	return [moves, headers];
-}
-
-const createBoard = (moves) => {
-  moves = moves.map((move) => (
-    {move_number: move.move_number, move: move.move}
-  ));
-  //TODO: replace with actual board
-  moves = moves.map((move) => (
-    "Move " + move.move_number + ": " + move.move
-  ))
-  return moves;
-}
 
 bot.login(auth.token);
