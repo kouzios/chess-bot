@@ -2,7 +2,7 @@ const { Client, MessageEmbed, MessageAttachment } = require("discord.js");
 var logger = require("winston");
 const fetch = require("node-fetch");
 var auth = require("./auth.json");
-var gifFrames = require('gif-frames');
+var gifFrames = require("gif-frames");
 
 // Configure logger settings
 logger.remove(logger.transports.Console);
@@ -12,6 +12,11 @@ logger.add(new logger.transports.Console(), {
 logger.level = "debug";
 
 const bot = new Client({ disableEveryone: true });
+
+var stored_message = null;
+var index = 0;
+var frameData = null;
+var channel = null;
 
 bot.on("ready", () => {
   logger.info("Connected");
@@ -45,12 +50,12 @@ bot.on("message", async (msg) => {
         );
         return;
       }
-    
+
       if (msg.attachments.size != 1) {
         msg.reply("Please ensure you have linked (only) your Chess gif file");
         return;
       }
-    
+
       const url = msg.attachments.values().next().value.url;
       msg.attachments = null;
       const extension = url.match(/\.\w{3,4}($|\?)/g)[0];
@@ -62,8 +67,10 @@ bot.on("message", async (msg) => {
         );
         return;
       }
-      msg.delete({timeout: 500});
-      msg.reply("Chess command received, gif deleted to save channel space, creating game");
+      msg.delete({ timeout: 1000 });
+      msg.reply(
+        "Chess command received, gif deleted to save channel space, creating game"
+      );
       chess(msg, url);
       break;
     default:
@@ -73,10 +80,61 @@ bot.on("message", async (msg) => {
 
 const chess = async (msg, url) => {
   //Break the provided gif into frames, then add them to a list to be iterated through as the user pleases
-  const frameData = await gifFrames({ url, frames: 'all', outputType: 'jpg', cumulative: true });
-  const image1 = (frameData[0].getImage())._obj;
-  msg.channel.send(new MessageAttachment(image1))
+  frameData = await gifFrames({
+    url,
+    frames: "all",
+    outputType: "jpg",
+    cumulative: true,
+  });
+  const initial_image = frameData[0].getImage()._obj;
+
+  //Credit to https://github.com/TheTurkeyDev/Discord-Games for the emoji code
+  msg.channel.send(new MessageAttachment(initial_image)).then((emsg) => {
+    index = 0;
+    channel = msg.channel;
+    stored_message = emsg;
+    stored_message.react("⬅️").then(() => stored_message.react("➡️"));
+
+    emojiOnListen();
+  });
 };
 
+//Credit to https://github.com/TheTurkeyDev/Discord-Games for the emoji code
+const filter = (reaction, user) => {
+  return (
+    ["⬅️", "➡️"].includes(reaction.emoji.name) &&
+    user.id !== stored_message.author.id
+  );
+};
+
+//Credit to https://github.com/TheTurkeyDev/Discord-Games for the emoji code
+const emojiOnListen = () => {
+  stored_message //Only listen to author emoji reactions
+    .awaitReactions((reaction, user) => filter(reaction, user), {
+      max: 1,
+      time: 3600000, //One hour til timeout
+    })
+    .then((collected) => {
+      const reaction = collected.first();
+
+      if (reaction.emoji.name === "⬅️" && index > 0) {
+        index--;
+      } else if (reaction.emoji.name === "➡️" && index < frameData.length) {
+        index++;
+      }
+
+      const image = frameData[index].getImage()._obj;
+      stored_message.delete();
+      channel.send(new MessageAttachment(image)).then((emsg) => {
+        stored_message = emsg;
+        stored_message.react("⬅️").then(() => stored_message.react("➡️"));
+        emojiOnListen();
+      });
+    })
+    .catch((collection) => {
+      stored_message.delete();
+      channel.send("Ran into an error while cycling emoji reactions");
+    });
+};
 
 bot.login(auth.token);
