@@ -69,7 +69,7 @@ bot.on("message", async (msg) => {
       }
       msg.delete({ timeout: 1000 });
       msg.reply(
-        "Chess command received, gif deleted to save channel space, creating game"
+        "Chess command received. Chess command with gif attachment deleted. Please iterate through the chess game through the arrow emojis reacted below."
       );
       chess(msg, url);
       break;
@@ -133,7 +133,6 @@ const emojiOnListen = () => {
     })
     .catch((collection) => {
       stored_message.delete();
-      channel.send("Ran into an error while cycling emoji reactions");
     });
 };
 
