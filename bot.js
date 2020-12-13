@@ -1,4 +1,4 @@
-const { Client, MessageEmbed, MessageAttachment } = require("discord.js");
+const { Client, MessageAttachment } = require("discord.js");
 var logger = require("winston");
 const fetch = require("node-fetch");
 var auth = require("./auth.json");
@@ -57,7 +57,6 @@ bot.on("message", async (msg) => {
       }
 
       const url = msg.attachments.values().next().value.url;
-      msg.attachments = null;
       const extension = url.match(/\.\w{3,4}($|\?)/g)[0];
       if (extension !== ".gif") {
         msg.reply(
