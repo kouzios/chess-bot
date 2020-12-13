@@ -1,6 +1,5 @@
 const { Client, MessageAttachment } = require("discord.js");
 var logger = require("winston");
-const fetch = require("node-fetch");
 var auth = require("./auth.json");
 var gifFrames = require("gif-frames");
 
